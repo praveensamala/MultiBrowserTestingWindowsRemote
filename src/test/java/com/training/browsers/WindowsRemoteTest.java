@@ -25,8 +25,8 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-public class WindowsTest {
-	String HubUrl = "http://192.168.134.143:4444/wd/hub";
+public class WindowsRemoteTest {
+	String HubUrl = "http://192.168.154.133:4444/wd/hub";
 	
 	DesiredCapabilities chromecapabilities = DesiredCapabilities.chrome();
 	ChromeOptions chromeoptions = new ChromeOptions();
@@ -59,77 +59,41 @@ public class WindowsTest {
 	@Test (enabled = true)
 	public void loginTest1() throws MalformedURLException {		
 		WebDriver driver = new RemoteWebDriver(new URL(HubUrl), chromeoptions);
-		facebookLoginTestChrome(driver);
+		facebookLoginTest(driver);
 		driver.close();
 	}
 	
 	@Test (enabled = true)
 	public void loginTest2() throws MalformedURLException {
 	    WebDriver driver = new RemoteWebDriver(new URL(HubUrl), firefoxcapabilities);
-	    facebookLoginTestFirefox(driver);
+	    facebookLoginTest(driver);
 		driver.close();
 	}
 	
-	public static void facebookLoginTestChrome(WebDriver driver) {
+	public static void facebookLoginTest(WebDriver driver) {
 		driver.get("https://www.facebook.com");
+		driver.manage().window().maximize();
 		
 		driver.findElement(By.id("email")).sendKeys("gamecheck280@gmail.com");
 		driver.findElement(By.id("pass")).sendKeys("system123");
 		driver.findElement(By.name("login")).click();
 		
-		WebDriverWait wait = new WebDriverWait(driver,30);
-		wait.until(ExpectedConditions.elementToBeClickable(By.cssSelector("button[type=\"submit\"]")));
+		waitForPageLoading(driver);
 		
 		List <WebElement> list = new ArrayList<WebElement>();
 		list = driver.findElements(By.tagName("span"));
 		boolean userfound = false;
 		for(WebElement e: list) {
-			if (e.getText().contains("Gamecheck") && !e.getText().contains("Not you") && !e.getText().contains("Log in as")) {
+			//System.out.println("\n****gettext : "+e.getText());
+			if (e.getText().contains("Gamecheck")) {
 				userfound = true;
 				break;
 			}
 		}
 		
-		driver.findElement(By.id("userNavigationLabel")).click();
-		
-		wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//span//form[@method='post']")));
-		WebElement ele = driver.findElement(By.xpath("//span//form[@method='post']"));
-		JavascriptExecutor executor = (JavascriptExecutor)driver;
-		executor.executeScript("arguments[0].click();", ele);
-		
-		wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//a[@role='button' and contains(text(), 'Create New Account')]")));
-		
-		AssertJUnit.assertTrue(userfound);
-	}
-	
-	public static void facebookLoginTestFirefox(WebDriver driver) {
-		driver.get("https://www.facebook.com");
-		
-		driver.findElement(By.id("email")).sendKeys("gamecheck280@gmail.com");
-		driver.findElement(By.id("pass")).sendKeys("system123");
-		driver.findElement(By.name("login")).click();
-		
-		WebDriverWait wait = new WebDriverWait(driver,30);
-		wait.until(ExpectedConditions.elementToBeClickable(By.cssSelector("button[type=\"submit\"]")));
-		
-		List <WebElement> list = new ArrayList<WebElement>();
-		list = driver.findElements(By.tagName("span"));
-		boolean userfound = false;
-		for(WebElement e: list) {
-			if (e.getText().contains("Gamecheck") && !e.getText().contains("Not you") && !e.getText().contains("Log in as")) {
-				userfound = true;
-				break;
-			}
-		}
-		
-		driver.findElement(By.id("userNavigationLabel")).click();
-		
-		wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//span//form[@method='post']")));
-		WebElement ele = driver.findElement(By.xpath("//span//form[@method='post']"));
-		JavascriptExecutor executor = (JavascriptExecutor)driver;
-		executor.executeScript("arguments[0].click();", ele);
-		
-		wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//a[@role='button' and contains(text(), 'Create New Account')]")));
+		driver.findElement(By.xpath("//div[@aria-label='Account']")).click();
+		driver.findElement(By.xpath("//span[contains(text(), 'Log Out')]")).click();
+		waitForPageLoading(driver);
 		
 		AssertJUnit.assertTrue(userfound);
 	}
@@ -137,6 +101,30 @@ public class WindowsTest {
 	@AfterClass
 	public void afterTest() {
 		
+	}
+	
+	public static void waitForPageLoading(WebDriver driver) {
+		int networkCallsLengthBefore = 0;
+		int networkCallsLengthAfter = 0;
+		System.out.println("***starting waitForPageRendering()");
+		for (int i = 0; i < 45; i++) {
+			try {
+				String scriptToExecute = "var network = performance.getEntries(); return network;";
+				String networkCalls = ((JavascriptExecutor) driver).executeScript(scriptToExecute).toString();
+				networkCallsLengthBefore = networkCallsLengthAfter;
+				networkCallsLengthAfter = networkCalls.length();				
+				System.out.println(networkCallsLengthBefore+" : "+networkCallsLengthAfter);
+				if (networkCallsLengthBefore == networkCallsLengthAfter && networkCalls.contains("entryType=paint,")) break;
+				System.out.println("praveen kumar samala - my own code: waiting for the page to be rendered...");
+			}
+			catch (Exception e) {
+				System.out.println("inspect error");
+			}
+			finally {
+				sleep(1);
+			}
+		}
+		System.out.println("***ending waitForPageLoading()"+"\n");
 	}
 	
 	public static void sleep(int n) {
